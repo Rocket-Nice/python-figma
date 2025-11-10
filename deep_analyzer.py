@@ -1,6 +1,6 @@
 # deep_analyzer.py
 import json
-from typing import Dict, Any, List, Set  # ДОБАВЛЯЕМ ИМПОРТ
+from typing import Dict, Any, List, Set
 from config import Config
 
 class DeepFigmaAnalyzer:
@@ -50,7 +50,7 @@ class DeepFigmaAnalyzer:
         return self.analysis_result
     
     def _analyze_element_completely(self, node: Dict[str, Any], element_id: str, depth: int) -> Dict[str, Any]:
-        """Рекурсивный анализ элемента со ВСЕМИ деталями"""
+        """Рекурсивный анализ элемента со ВСЕМИ деталями и полной вложенностью"""
         self.element_counter += 1
         element_number = self.element_counter
         
@@ -63,6 +63,7 @@ class DeepFigmaAnalyzer:
         
         element_data = {
             "id": f"{element_id}-{element_number}",
+            "original_id": node.get("id", ""),
             "name": node.get("name", ""),
             "type": node.get("type", ""),
             "depth": depth,
@@ -93,12 +94,12 @@ class DeepFigmaAnalyzer:
             "children": []
         }
         
-        # Логируем анализ (только первые 2 уровня для читаемости)
-        if depth <= 2:
+        # Логируем анализ (только первые 3 уровня для читаемости)
+        if depth <= 3:
             indent = "  " * depth
             print(f"{indent}📦 {element_data['name']} ({element_data['type']}) - {element_data['size']['width']}×{element_data['size']['height']}")
         
-        # Рекурсивный анализ детей
+        # Рекурсивный анализ детей (СОХРАНЯЕМ ПОЛНУЮ ВЛОЖЕННОСТЬ)
         children = node.get("children", [])
         for i, child in enumerate(children):
             child_analysis = self._analyze_element_completely(child, f"{element_id}-{element_number}", depth + 1)
