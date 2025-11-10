@@ -51,13 +51,43 @@ curl -X POST http://localhost:5000/process \
     "node_id": "1619:4",
     "user_id": "test_user_123"
   }'
-🔧 НАСТРОЙКА N8N WORKFLOW
-5. Создай новый workflow в n8n с нодами:
-📱 Telegram Trigger Node
-Bot Token: 8502452188:AAHJGqKdW8wCkjRedBq8ekXWlbuKF7E3oGg
 
-Update Type: Message
 
+
+
+❗ УСТРАНЕНИЕ ПРОБЛЕМ
+Если сервер не запускается:
+bash
+# Проверь зависимости
+pip list | grep Flask
+
+# Проверь порт
+netstat -tulpn | grep 5000
+
+# Если порт занят
+pkill -f figma_bot_server
+python figma_bot_server.py
+Если n8n не соединяется с сервером:
+Проверь что сервер запущен на http://localhost:5000
+
+Проверь firewall настройки
+
+Убедись что n8n и сервер на одной машине
+
+Если не генерируются промпты:
+Запусти python main.py отдельно для тестирования
+
+Проверь что создается папка generated_code/
+
+Убедись в правильности Figma данных
+
+Теперь у тебя полная инструкция! Запускай и тестируй 🚀
+
+
+
+
+
+# #########################################################
 🤖 AI Agent Node
 # Системный промпт:
 
@@ -169,34 +199,266 @@ get_next_prompt
 Твоя задача - быть проводником между Figma дизайном и готовым веб-кодом, четко следуя установленной последовательности!
 
 
+### ############### ################
 
-❗ УСТРАНЕНИЕ ПРОБЛЕМ
-Если сервер не запускается:
-bash
-# Проверь зависимости
-pip list | grep Flask
+# ВОРКФЛОУ ДЛЯ N8N
+Here's your workflow export in JSON format. You can import this into any n8n instance:
 
-# Проверь порт
-netstat -tulpn | grep 5000
+{
+  "name": "Telegram Bot with OpenRouter AI Agent Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ]
+      },
+      "id": "3f2bcd19-fc76-477b-bbdf-543d317d2cc4",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        4592,
+        1904
+      ],
+      "webhookId": "490579df-8e10-44ec-b2b8-b0282c40097d",
+      "credentials": {
+        "telegramApi": {
+          "id": "RciuMnWIcjygiy0h",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-chat"
+      },
+      "id": "7e2ea0ba-2760-41b7-a1f1-517eb09059fc",
+      "name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        4768,
+        2144
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "PuU8Yiwn2P1fUNv1",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "hasOutputParser": false,
+        "options": {
+          "systemMessage": "CSS СТИЛИ:\n\ncss\n/* CSS с дизайн-токенами */\n.container {\n  width: 100%;\n  background: var(--color-primary);\n}\n\n.header {\n  padding: var(--spacing-md);\n}\nJAVASCRIPT (если нужен):\n\njavascript\n// Интерактивность\ndocument.addEventListener('DOMContentLoaded', function() {\n  // код\n});\n⚡ ОСОБЫЕ ИНСТРУКЦИИ:\nПРИ ОБРАБОТКЕ КОРНЕВОГО ФРЕЙМА:\nСоздай основную HTML структуру\n\nОпредели CSS переменные для дизайн-токенов\n\nЗаложи основу для последующих секций\n\nПРИ ОБРАБОТКЕ КОНТЕЙНЕРА:\nСоздай контейнерную структуру\n\nРеализуй layout систему\n\nПодготовь места для вставки родительских фреймов\n\nПРИ ОБРАБОТКЕ РОДИТЕЛЬСКИХ ФРЕЙМОВ:\nКаждая секция должна быть самодостаточной\n\nСохраняй семантическую структуру\n\nИспользуй общие дизайн-токены\n\n🛠 ИНСТРУМЕНТЫ:\nprocess_figma_design\nНазначение: Запуск анализа Figma макета\n\nПараметры: figma_token, file_key, node_id\n\nРезультат: Генерация структуры промптов\n\nget_next_prompt\nНазначение: Получение следующего промпта в последовательности\n\nПараметры: selected_frame (при выборе фрейма)\n\nРезультат: prompt_name, prompt_content, available_frames\n\n💬 СТИЛЬ ОБЩЕНИЯ:\nБудь вежливым и структурируй процесс\n\nПосле каждого этапа подтверждай завершение\n\nЧетко объясняй что было сделано\n\nПредлагай следующий шаг с четкими вариантами\n\nПри генерации кода - показывай реальный код, а не описание\n\n🚀 ПОСЛЕДОВАТЕЛЬНОСТЬ ДИАЛОГА:\n\"Привет! Давай преобразуем Figma в код. Сначала нужен Figma API Token...\"\n\n\"Токен получен! Теперь Figma File Key...\"\n\n\"File Key есть! Теперь Node ID...\"\n\n\"Все данные собраны! Запускаю анализ Figma...\"\n\n\"Анализ завершен! Начинаем с корневого фрейма...\"\n\n[показывает код корневого фрейма]\n\n\"Переходим к контейнеру...\"\n\n[показывает код контейнера]\n\n\"Теперь выбери фрейм для обработки: [список]\"\n\n[обрабатывает выбранный фрейм, показывает код]\n\nПовторяет шаги 9-10 пока не обработаны все фреймы\n\n\"Все фреймы обработаны! Код готов к использованию.\"\n\n⚠️ ВАЖНЫЕ ПРАВИЛА:\nНИКОГДА не пропускай этапы последовательности\n\nВСЕГДА показывай реальный код в ответ на промпты\n\nИСПОЛЬЗУЙ семантические HTML теги\n\nПРИМЕНЯЙ CSS переменные для дизайн-токенов\n\nСОБЛЮДАЙ адаптивность и доступность\n\nОБЯЗАТЕЛЬНО подтверждай каждый завершенный этап\n\nТвоя задача - быть проводником между Figma дизайном и готовым веб-кодом, четко следуя установленной последовательности!"
+        }
+      },
+      "id": "7d624a64-541f-45e0-85d5-db60818c686a",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        4936,
+        1904
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.formatted_text }}",
+        "replyMarkup": "none",
+        "additionalFields": {
+          "disable_notification": true,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "6b7a8aa8-35f5-4de1-a191-af6783383654",
+      "name": "Send Telegram Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5632,
+        1904
+      ],
+      "webhookId": "e5bdfc59-900c-4db4-82f4-5b6641d72f3e",
+      "credentials": {
+        "telegramApi": {
+          "id": "RciuMnWIcjygiy0h",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Processes Figma design with provided API token, file key, and node ID. Returns generated code.",
+        "method": "POST",
+        "url": "https://python-figma.onrender.com/process",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"figma_token\": $fromAI(\"figma_token\", \"Figma API access token\"), \"file_key\": $fromAI(\"file_key\", \"Figma file key\"), \"node_id\": $fromAI(\"node_id\", \"Figma node ID\"), \"user_id\": $fromAI(\"user_id\", \"Telegram user ID\", \"string\", \"default_user\")} }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "dc5e706c-643c-4da1-941c-8888fef1f0a2",
+      "name": "Call Python Script API",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.3,
+      "position": [
+        5088,
+        2144
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Gets the next prompt file to process. Optionally accepts selected_frame parameter to get a specific frame prompt.",
+        "method": "POST",
+        "url": "https://python-figma.onrender.com/next_prompt",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"user_id\": $fromAI(\"user_id\", \"Telegram user ID\", \"string\", \"default_user\"), \"selected_frame\": $fromAI(\"selected_frame\", \"Selected frame name (optional)\", \"string\", \"\")} }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "8d8b27ae-30a0-4f6a-b15d-cf7591633c4f",
+      "name": "Get Next Prompt",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.3,
+      "position": [
+        5248,
+        2144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Clean text for Telegram by removing markdown and problematic characters\nconst output = $input.item.json.output || '';\n\n// Remove markdown formatting\nlet cleanText = output\n  // Remove bold/italic markers\n  .replace(/\\*\\*/g, '')\n  .replace(/\\*/g, '')\n  .replace(/__/g, '')\n  .replace(/_/g, '')\n  // Remove code blocks\n  .replace(/```[\\s\\S]*?```/g, '')\n  .replace(/`/g, '')\n  // Remove HTML tags\n  .replace(/<[^>]*>/g, '')\n  // Remove links\n  .replace(/\\[([^\\]]+)\\]\\([^)]+\\)/g, '$1')\n  // Remove headers\n  .replace(/^#{1,6}\\s+/gm, '')\n  // Clean up multiple newlines\n  .replace(/\\n{3,}/g, '\\n\\n')\n  // Trim whitespace\n  .trim();\n\nreturn {\n  json: {\n    formatted_text: cleanText\n  }\n};"
+      },
+      "id": "cf55c2bf-d7bd-4433-b8cb-1b88b95a96a3",
+      "name": "Format for Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5408,
+        1904
+      ]
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.message.chat.id }}",
+        "contextWindowLength": 5
+      },
+      "id": "a9a2e865-4c17-4e9a-a3f2-65cb7dd85c28",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        4928,
+        2144
+      ]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Python Script API": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Next Prompt": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Format for Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Telegram": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}
+To import this workflow:
 
-# Если порт занят
-pkill -f figma_bot_server
-python figma_bot_server.py
-Если n8n не соединяется с сервером:
-Проверь что сервер запущен на http://localhost:5000
+Copy the JSON above
+In n8n, click the "+" button or go to Workflows
+Click "Import from File" or "Import from URL"
+Paste the JSON
+Configure your credentials:
+Telegram API (for Telegram Trigger and Send Telegram Response)
+OpenRouter API (for OpenRouter Chat Model)
 
-Проверь firewall настройки
-
-Убедись что n8n и сервер на одной машине
-
-Если не генерируются промпты:
-Запусти python main.py отдельно для тестирования
-
-Проверь что создается папка generated_code/
-
-Убедись в правильности Figma данных
-
-Теперь у тебя полная инструкция! Запускай и тестируй 🚀
+# ###################################################################
 
 
 
