@@ -318,8 +318,13 @@ if __name__ == '__main__':
     # app.run(host='127.0.0.1', port=5000, debug=True)
 
     # ...
-    print("🚀 Запуск Figma Bot Server на http://0.0.0.0:80")
-    print("📁 Текущая директория:", os.getcwd())
+    # print("🚀 Запуск Figma Bot Server на http://0.0.0.0:80")
+    # print("📁 Текущая директория:", os.getcwd())
     
-    # Запускаем на порту 80 (стандартный HTTP порт)
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    # # Запускаем на порту 80 (стандартный HTTP порт)
+    # app.run(host='0.0.0.0', port=8080, debug=True)
+
+    # ...
+    port = int(os.environ.get('PORT', 5000))
+    print(f"🚀 Запуск Figma Bot Server на порту {port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
