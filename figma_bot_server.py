@@ -199,54 +199,47 @@ def process_figma():
 
 @app.route('/next_prompt', methods=['POST'])
 def get_next_prompt():
-    """Получение следующего промпта в последовательности"""
     try:
         data = request.json
         user_id = data.get('user_id', 'default_user')
         selected_frame = data.get('selected_frame')
         
-        print(f"📥 Получен POST запрос на /next_prompt от {user_id}")
-        print(f"   Selected frame: {selected_frame}")
-        
         session = user_sessions.get(user_id)
         if not session:
-            return jsonify({"success": False, "error": "Сессия не найдена. Начните с /start"}), 400
+            return jsonify({"success": False, "error": "Сессия не найдена"}), 400
         
-        # Определяем следующий промпт на основе текущего шага
+        # Определяем следующий промпт
         next_prompt_name = None
-        next_step_description = ""
         
         if session["current_step"] == "root_frame":
             next_prompt_name = "root_frame_prompt.txt"
             session["current_step"] = "container"
-            next_step_description = "root_container_prompt.txt"
             
         elif session["current_step"] == "container":
             next_prompt_name = "root_container_prompt.txt"
             session["current_step"] = "parent_frames"
-            next_step_description = "выбор фрейма из parent_frames"
             
         elif session["current_step"] == "parent_frames" and selected_frame:
             next_prompt_name = selected_frame
             session["processed_prompts"].append(selected_frame)
-            next_step_description = "следующий фрейм из parent_frames"
-            
-        else:
-            return jsonify({
-                "success": False, 
-                "error": "Неопределенное состояние или не выбран фрейм"
-            }), 400
         
-        # Получаем содержимое промпта
+        # ВАЖНО: Получаем РЕАЛЬНОЕ содержимое промпта
         prompt_content = processor.get_prompt_content(next_prompt_name)
+        
+        # Если контент не найден, возвращаем ошибку
+        if "❌" in prompt_content:
+            return jsonify({
+                "success": False,
+                "error": f"Не удалось прочитать промпт: {prompt_content}"
+            }), 400
         
         session["processed_prompts"].append(next_prompt_name)
         
         response_data = {
             "success": True,
             "prompt_name": next_prompt_name,
-            "prompt_content": prompt_content,
-            "next_step": next_step_description,
+            "prompt_content": prompt_content,  # ← ВОТ ЭТО ВАЖНО!
+            "next_step": "обработка промпта ИИ",
             "processed_count": len(session["processed_prompts"])
         }
         
@@ -254,7 +247,7 @@ def get_next_prompt():
         if session["current_step"] == "parent_frames":
             response_data["available_frames"] = session["available_frames"]
         
-        print(f"📤 Отправляем промпт: {next_prompt_name}")
+        print(f"📤 Отправляем промпт: {next_prompt_name} ({len(prompt_content)} символов)")
         return jsonify(response_data)
         
     except Exception as e:
