@@ -10,19 +10,21 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    # Ваши данные Figma из .env файла
-    FIGMA_ACCESS_TOKEN = os.getenv('FIGMA_ACCESS_TOKEN')
-    FIGMA_FILE_KEY = os.getenv('FIGMA_FILE_KEY')
+    # Конфигурация Figma API
+    # Эти данные берутся из переменных окружения или .env файла
+    FIGMA_ACCESS_TOKEN = os.getenv('FIGMA_ACCESS_TOKEN')  # Токен для доступа к Figma API
+    FIGMA_FILE_KEY = os.getenv('FIGMA_FILE_KEY')          # ID файла Figma (из URL)
     
-    # Исправляем node-id - в API используется двоеточие, а в URL дефис
-    FIGMA_NODE_ID = "1619:4"  # Меняем дефис на двоеточие!
+    # ID конкретной ноды (элемента) для анализа
+    # В Figma API используется двоеточие, в URL - дефис, поэтому меняем
+    FIGMA_NODE_ID = "96:5321"  # Пример: "1619:4" вместо "1619-4"
     
-    # Для Copilot/VS Code
-    OUTPUT_DIR = "generated_code"
+    # Настройки выходных файлов
+    OUTPUT_DIR = "generated_code"  # Папка куда сохраняем результаты
     
-    # Настройки разделения
-    MAX_ELEMENTS_PER_FRAME = 200  # Максимум элементов в одном фрейме (но сохраняем полную вложенность)
-    MIN_FRAME_CHILDREN = 2  # Минимальное количество детей для создания отдельного промпта фрейма
-
-    # Константы анализа
-    SPACING_BASE = 8
+    # Настройки для разделения больших макетов
+    MAX_ELEMENTS_PER_FRAME = 200  # Если элементов больше - разбиваем на части
+    MIN_FRAME_CHILDREN = 2        # Минимальное количество детей для создания отдельного фрейма
+    
+    # Базовые значения для анализа (используются для нормализации)
+    SPACING_BASE = 8  # Базовый шаг отступов (часто 8px система)

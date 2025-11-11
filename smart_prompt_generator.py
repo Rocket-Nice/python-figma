@@ -5,50 +5,70 @@ from typing import Dict, Any, List
 from config import Config
 
 class SmartPromptGenerator:
+    """
+    Генератор умных промптов для ИИ (ChatGPT и т.д.)
+    Преобразует технические данные Figma в понятные инструкции для нейросети
+    """
     
     def __init__(self):
+        # Настройка путей для выходных файлов
         self.output_dir = Config.OUTPUT_DIR
         os.makedirs(self.output_dir, exist_ok=True)
+        
+        # Папка для промптов
         self.prompts_dir = os.path.join(self.output_dir, "smart_prompts")
         os.makedirs(self.prompts_dir, exist_ok=True)
     
     def generate_smart_prompts(self, analysis: Dict[str, Any], frames_data: Dict[str, Any] = None):
-        """Генерация умных промптов для родительских фреймов первого уровня"""
+        """
+        Главный метод - генерирует умные промпты для родительских фреймов
+        analysis: результат глубокого анализа
+        frames_data: разделенные фреймы
+        """
         print("🧠 Генерируем умные промпты для родительских фреймов...")
         
-        # Сохраняем полный анализ
+        # Сохраняем полный анализ в JSON для отладки
         self._save_full_analysis(analysis)
         
         if frames_data:
-            # Генерируем промпты для каждого родительского фрейма
+            # Новая логика: генерируем промпты для каждого родительского фрейма
             self._generate_parent_frames_prompts(frames_data)
         else:
-            # Старая логика (для обратной совместимости)
+            # Старая логика для обратной совместимости
             self._generate_legacy_prompts(analysis)
         
-        # Создаем инструкцию
+        # Создаем общую инструкцию по использованию промптов
         self._create_smart_instructions(analysis, frames_data)
         
         print(f"✅ Умные промпты сохранены в: {self.prompts_dir}")
     
     def _generate_parent_frames_prompts(self, frames_data: Dict[str, Any]):
-        """Генерация промптов на основе родительских фреймов первого уровня"""
+        """
+        Генерация промптов на основе системы родительских фреймов
+        Каждый фрейм первого уровня становится отдельным промптом
+        """
+        # Создаем папку для промптов родительских фреймов
         frames_prompts_dir = os.path.join(self.prompts_dir, "parent_frames")
         os.makedirs(frames_prompts_dir, exist_ok=True)
         
-        # Промпт для корневого фрейма
+        # Промпт для корневого фрейма (основа всего макета)
         self._generate_root_frame_prompt(frames_data["root_frame"])
         
-        # Промпты для родительских фреймов первого уровня
+        # Промпты для каждого родительского фрейма первого уровня
         for frame_info in frames_data["parent_frames"]:
             frame_file = os.path.join(self.output_dir, frame_info["file"])
             if os.path.exists(frame_file):
+                # Читаем данные фрейма из JSON файла
                 with open(frame_file, "r", encoding="utf-8") as f:
                     frame_data = json.load(f)
+                # Генерируем промпт для этого фрейма
                 self._generate_parent_frame_prompt(frame_data, frame_info)
     
     def _generate_root_frame_prompt(self, root_frame: Dict[str, Any]):
-        """Генерация промпта для корневого фрейма"""
+        """
+        Генерация промпта для корневого фрейма
+        Корневой фрейм - это контейнер для всех основных секций
+        """
         prompt = f"""
 # КОРНЕВОЙ ФРЕЙМ: {root_frame.get('name', 'N/A')}
 
@@ -83,12 +103,18 @@ class SmartPromptGenerator:
 ## ВАЖНО:
 Этот фрейм является контейнером для всего макета.
 Родительские фреймы первого уровня будут реализованы отдельно.
+Создай семантическую HTML структуру и базовые CSS стили.
+Используй предоставленные дизайн-токены для консистентности.
 """
         
+        # Сохраняем промпт в файл
         self._save_prompt("root_frame_prompt.txt", prompt)
     
     def _generate_parent_frame_prompt(self, frame_data: Dict[str, Any], frame_info: Dict[str, Any]):
-        """Генерация промпта для родительского фрейма первого уровня"""
+        """
+        Генерация промпта для родительского фрейма первого уровня
+        Каждый такой фрейм - самостоятельная секция макета
+        """
         prompt = f"""
 # РОДИТЕЛЬСКИЙ ФРЕЙМ: {frame_data.get('name', 'N/A')}
 
@@ -130,45 +156,54 @@ class SmartPromptGenerator:
 Этот промпт содержит ПОЛНУЮ ИЕРАРХИЮ всех элементов этого фрейма.
 Все дети, дети детей и т.д. уже включены в структуру.
 Реализуй компонент ЦЕЛИКОМ на основе предоставленных данных.
+Не нужно обращаться к другим файлам - вся информация здесь.
 """
         
+        # Создаем имя файла для промпта
         filename = f"parent_frames/{frame_data['id']}_{self._sanitize_name(frame_data['name'])}_prompt.txt"
         self._save_prompt(filename, prompt)
     
     def _format_frame_styles(self, styles: Dict[str, Any]) -> str:
-        """Форматирование стилей фрейма"""
+        """Форматирование стилей фрейма в читаемый текст"""
         lines = []
         
+        # Фон
         if styles.get('background'):
             lines.append(f"- **Фон**: `{styles['background']}`")
         
+        # Границы
         border = styles.get('border', {})
         if border.get('color'):
             lines.append(f"- **Граница**: `{border['color']}`, {border.get('width', 0)}px")
         if border.get('radius', 0) > 0:
             lines.append(f"- **Border Radius**: {border['radius']}px")
         
+        # Прозрачность
         if styles.get('opacity', 1) < 1.0:
             lines.append(f"- **Прозрачность**: {styles['opacity']}")
         
         return "\n".join(lines) if lines else "Базовые стили (без особых настроек)"
     
     def _format_frame_layout(self, layout: Dict[str, Any]) -> str:
-        """Форматирование лайаут настроек"""
+        """Форматирование настроек лайаута"""
         lines = []
         
+        # Режим лайаута (FLEX, GRID и т.д.)
         mode = layout.get('mode', 'NONE')
         if mode != 'NONE':
             lines.append(f"- **Режим лайаута**: {mode}")
         
+        # Расстояние между элементами
         spacing = layout.get('spacing', 0)
         if spacing > 0:
             lines.append(f"- **Межэлементный spacing**: {spacing}px")
         
+        # Внутренние отступы
         padding = layout.get('padding', {})
         if any(padding.values()):
             lines.append(f"- **Padding**: L:{padding.get('left',0)} R:{padding.get('right',0)} T:{padding.get('top',0)} B:{padding.get('bottom',0)}px")
         
+        # Ограничения позиционирования
         constraints = layout.get('constraints', {})
         if constraints:
             lines.append(f"- **Констрейнты**: {constraints}")
@@ -177,6 +212,7 @@ class SmartPromptGenerator:
     
     def _format_parent_frames_overview(self, children: List[Dict[str, Any]]) -> str:
         """Форматирование обзора родительских фреймов"""
+        # Фильтруем только FRAME элементы первого уровня
         parent_frames = [child for child in children if child.get('type') == 'FRAME']
         
         if not parent_frames:
@@ -184,6 +220,7 @@ class SmartPromptGenerator:
         
         lines = ["**Основные секции макета:**"]
         for i, frame in enumerate(parent_frames):
+            # Считаем общее количество элементов в этом фрейме
             total_elements = self._count_total_elements(frame)
             lines.append(f"{i+1}. **{frame.get('name', 'Unnamed')}**")
             lines.append(f"   - Размер: {frame.get('size', {}).get('width', 0)}×{frame.get('size', {}).get('height', 0)}px")
@@ -193,39 +230,49 @@ class SmartPromptGenerator:
         return "\n".join(lines)
     
     def _list_parent_frames_names(self, children: List[Dict[str, Any]]) -> str:
-        """Список имен родительских фреймов"""
+        """Простой список имен родительских фреймов"""
         parent_frames = [child for child in children if child.get('type') == 'FRAME']
         
         if not parent_frames:
             return "Нет родительских фреймов"
         
+        # Просто список имен через дефис
         names = [f"- {frame.get('name', 'Unnamed')}" for frame in parent_frames]
         return "\n".join(names)
     
     def _format_complete_frame_structure(self, children: List[Dict[str, Any]], depth: int = 1) -> str:
-        """Форматирование ПОЛНОЙ структуры фрейма"""
+        """
+        Форматирование ПОЛНОЙ структуры фрейма с отступами
+        Показывает всю иерархию элементов с их характеристиками
+        """
         if not children:
             return "Нет дочерних элементов"
         
         lines = []
         for child in children:
+            # Создаем отступы для визуализации вложенности
             indent = "  " * depth
+            
+            # Основная информация об элементе
             child_type = child.get('type', 'UNKNOWN')
             child_name = child.get('name', 'Unnamed')
             child_size = child.get('size', {})
             child_children_count = len(child.get('children', []))
             
+            # Формируем строку с основной информацией
             line = f"{indent}- **{child_type}**: {child_name}"
             line += f" ({child_size.get('width', 0)}×{child_size.get('height', 0)}px)"
             
+            # Добавляем информацию о детях если они есть
             if child_children_count > 0:
                 line += f" [детей: {child_children_count}]"
             
-            # Стили элемента
+            # Добавляем информацию о стилях
             styles = child.get('styles', {})
             if styles.get('background'):
                 line += f" | Фон: {styles['background']}"
             
+            # Добавляем информацию о типографике для текстовых элементов
             typography = styles.get('typography', {})
             if typography and typography.get('font_size'):
                 line += f" | Текст: {typography.get('font_family', 'Inter')} {typography.get('font_size')}px"
@@ -234,108 +281,143 @@ class SmartPromptGenerator:
             
             # Рекурсивно добавляем всех детей (ПОЛНАЯ ВЛОЖЕННОСТЬ)
             if child.get('children'):
-                lines.append(self._format_complete_frame_structure(child.get('children', []), depth + 1))
+                child_structure = self._format_complete_frame_structure(child.get('children', []), depth + 1)
+                lines.append(child_structure)
         
         return "\n".join(lines)
     
     def _format_frame_design_tokens(self, tokens: Dict[str, Any]) -> str:
-        """Форматирование дизайн-токенов фрейма"""
+        """
+        Форматирование дизайн-токенов, используемых в этом фрейме
+        Показывает какие цвета, шрифты и отступы используются в секции
+        """
         lines = []
         
+        # ЦВЕТА используемые в этом фрейме
         colors = tokens.get('colors', [])
         if colors:
             lines.append("**Цвета в этом фрейме:**")
-            for color in colors[:8]:
+            for color in colors[:8]:  # Показываем первые 8 цветов
                 lines.append(f"- `{color}`")
         
+        # ТИПОГРАФИКА используемая в этом фрейме
         typography = tokens.get('typography', [])
         if typography:
             lines.append("\n**Типографика в этом фрейме:**")
-            for i, typo in enumerate(typography[:4]):
+            for i, typo in enumerate(typography[:4]):  # Показываем первые 4 стиля
                 font_family = typo.get('font_family', 'Inter')
                 font_size = typo.get('font_size', 16)
                 font_weight = typo.get('font_weight', 400)
                 lines.append(f"- Стиль {i+1}: {font_family} {font_size}px, вес {font_weight}")
         
+        # ОТСТУПЫ используемые в этом фрейме
         spacing = tokens.get('spacing', [])
         if spacing:
             lines.append("\n**Spacing значения:**")
-            for space in spacing[:6]:
+            for space in spacing[:6]:  # Показываем первые 6 значений
                 lines.append(f"- `{space}px`")
         
+        # СКРУГЛЕНИЯ используемые в этом фрейме
         radius = tokens.get('border_radius', [])
         if radius:
             lines.append("\n**Border Radius значения:**")
-            for rad in radius[:4]:
+            for rad in radius[:4]:  # Показываем первые 4 значения
                 lines.append(f"- `{rad}px`")
         
         return "\n".join(lines) if lines else "Используются в основном глобальные токены"
     
     def _format_global_tokens(self, tokens: Dict[str, Any]) -> str:
-        """Форматирование глобальных токенов"""
+        """
+        Форматирование глобальных токенов всей дизайн-системы
+        Это общие цвета, шрифты и отступы для всего макета
+        """
         lines = []
         
+        # ГЛОБАЛЬНЫЕ ЦВЕТА дизайн-системы
         colors = tokens.get('colors', {})
         if colors:
             lines.append("**Основные цвета дизайн-системы:**")
-            for name, color in list(colors.items())[:5]:
+            for name, color in list(colors.items())[:5]:  # Первые 5 цветов
                 lines.append(f"- `{name}`: `{color}`")
         
+        # ГЛОБАЛЬНАЯ ТИПОГРАФИКА дизайн-системы
         typography = tokens.get('typography', {})
         if typography:
             lines.append("\n**Типографика дизайн-системы:**")
-            for name, styles in list(typography.items())[:3]:
+            for name, styles in list(typography.items())[:3]:  # Первые 3 стиля
                 lines.append(f"- `{name}`: {styles.get('font_family', 'Inter')} {styles.get('font_size', 16)}px")
         
+        # ГЛОБАЛЬНАЯ СИСТЕМА ОТСТУПОВ
         spacing = tokens.get('spacing', {})
         if spacing:
             lines.append("\n**Spacing система:**")
-            for name, value in list(spacing.items())[:3]:
+            for name, value in list(spacing.items())[:3]:  # Первые 3 отступа
                 lines.append(f"- `{name}`: `{value}`")
         
+        # ГЛОБАЛЬНАЯ СИСТЕМА СКРУГЛЕНИЙ
         radius = tokens.get('border_radius', {})
         if radius:
             lines.append("\n**Border Radius система:**")
-            for name, value in list(radius.items())[:3]:
+            for name, value in list(radius.items())[:3]:  # Первые 3 скругления
                 lines.append(f"- `{name}`: `{value}`")
         
         return "\n".join(lines) if lines else "Глобальные токены не определены"
     
     def _count_total_elements(self, element: Dict[str, Any]) -> int:
-        """Считаем общее количество элементов включая всех детей"""
-        count = 1  # Сам элемент
+        """
+        Рекурсивно считает общее количество элементов включая всех детей
+        Используется для оценки сложности каждого фрейма
+        """
+        count = 1  # Начинаем с текущего элемента
         
+        # Рекурсивно добавляем счетчики всех детей
         for child in element.get("children", []):
             count += self._count_total_elements(child)
         
         return count
     
     def _save_full_analysis(self, analysis: Dict[str, Any]):
-        """Сохранение полного анализа"""
+        """
+        Сохраняет полный анализ в JSON файл для отладки и reference
+        """
         json_file = os.path.join(self.output_dir, "complete_analysis_full.json")
         with open(json_file, "w", encoding="utf-8") as f:
             json.dump(analysis, f, indent=2, ensure_ascii=False, default=str)
-        print(f"📊 Полный анализ: {json_file}")
+        print(f"📊 Полный анализ сохранен: {json_file}")
     
     def _save_prompt(self, filename: str, content: str):
-        """Сохранение промпта в файл"""
+        """
+        Сохраняет промпт в файл с созданием необходимых папок
+        """
         filepath = os.path.join(self.prompts_dir, filename)
+        
+        # Создаем папки если их нет (для вложенных путей)
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         
+        # Сохраняем содержимое промпта
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
     
     def _create_smart_instructions(self, analysis: Dict[str, Any], frames_data: Dict[str, Any] = None):
-        """Создание инструкции для умных промптов"""
+        """
+        Создает общую инструкцию по использованию системы промптов
+        Помогает понять как работать сгенерированными промптами
+        """
         if frames_data:
+            # Новая инструкция для системы с родительскими фреймами
             instructions = self._create_parent_frames_instructions(analysis, frames_data)
         else:
+            # Старая инструкция для обратной совместимости
             instructions = self._create_legacy_instructions(analysis)
         
+        # Сохраняем инструкцию в Markdown файл
         self._save_prompt("SMART_INSTRUCTIONS.md", instructions)
     
     def _create_parent_frames_instructions(self, analysis: Dict[str, Any], frames_data: Dict[str, Any]) -> str:
-        """Создание инструкции для системы с родительскими фреймами"""
+        """
+        Создает подробную инструкцию для системы с родительскими фреймами
+        Объясняет как работать с разделенными фреймами
+        """
         stats = analysis["statistics"]
         
         instructions = f"""
@@ -401,16 +483,20 @@ class SmartPromptGenerator:
         return instructions
 
     def _format_parent_frames_for_instructions(self, parent_frames: List[Dict[str, Any]]) -> str:
-        """Форматирование родительских фреймов для инструкции"""
+        """Форматирует список родительских фреймов для инструкции"""
         lines = []
         for frame in parent_frames:
             lines.append(f"- **{frame['name']}** - {frame['total_elements']} элементов")
         return "\n".join(lines)
 
     def _generate_legacy_prompts(self, analysis: Dict[str, Any]):
-        """Старая логика для обратной совместимости"""
+        """
+        Старая логика генерации промптов для обратной совместимости
+        Используется если не переданы frames_data
+        """
         print("⚠️  Используется устаревшая логика генерации промптов")
-        # Простая реализация для обратной совместимости
+        
+        # Простая реализация одного общего промпта
         prompt = f"""
 # ОСНОВНОЙ ПРОМПТ FIGMA МАКЕТА
 
@@ -424,26 +510,37 @@ class SmartPromptGenerator:
         self._save_prompt("legacy_main_prompt.txt", prompt)
 
     def _format_simple_structure(self, element: Dict[str, Any], depth: int = 0) -> str:
-        """Простое форматирование структуры"""
+        """
+        Простое форматирование структуры для старой системы
+        Показывает только первые 10 элементов каждого уровня для читаемости
+        """
         indent = "  " * depth
         lines = []
         
+        # Добавляем текущий элемент
         lines.append(f"{indent}- {element.get('type')}: {element.get('name')}")
         
-        for child in element.get('children', [])[:10]:  # Ограничиваем для читаемости
+        # Рекурсивно добавляем детей (ограничиваем количество для читаемости)
+        for child in element.get('children', [])[:10]:
             lines.append(self._format_simple_structure(child, depth + 1))
         
         return "\n".join(lines)
 
     def _create_legacy_instructions(self, analysis: Dict[str, Any]) -> str:
-        """Старая инструкция для обратной совместимости"""
+        """
+        Старая инструкция для обратной совместимости
+        """
         return """
 # УСТАРЕВШАЯ СИСТЕМА ПРОМПТОВ
 
 Эта система использует устаревший формат промптов.
 Рекомендуется использовать систему с родительскими фреймами.
+Для этого убедитесь что FrameSplitter работает корректно.
 """
 
     def _sanitize_name(self, name: str) -> str:
-        """Очистка имени для файла"""
-        return "".join(c if c.isalnum() else "_" for c in name.lower())[:30]
+        """
+        Очищает имя для использования в имени файла
+        Заменяет специальные символы на подчеркивания
+        """
+        return "".join(c if c.isalnum() else "_" for c in name.lower())[:30]  # Ограничиваем длину имени
